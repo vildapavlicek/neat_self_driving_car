@@ -1,11 +1,17 @@
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
-use std::ops::Neg;
+use std::ops::{Deref, Neg};
+
+mod car;
+mod common;
+mod road;
+mod sensor;
 
 mod utils;
 use utils::bool_to_f32;
 
 const CAR_SIZE: Vec2 = Vec2::new(25., 50.);
+const CAR_Z_LAYER: f32 = 1.0;
 const LINE_SIZE: Vec2 = Vec2::new(10., 1024.);
 
 fn main() {
@@ -25,11 +31,69 @@ fn main() {
         .add_system(sync_camera)
         .add_system(kill)
         .add_system(stop_dead)
+        .add_system(mid_lines_system)
         .run();
 }
 
 fn start_up(mut cmd: Commands) {
     cmd.spawn_bundle(Camera2dBundle::default());
+
+    // START SECTION
+    // DBG lines
+
+    cmd.spawn_bundle(SpriteBundle {
+        sprite: Sprite {
+            custom_size: Some(Vec2 { x: 1., y: 80. }),
+            color: Color::YELLOW,
+            ..default()
+        },
+        transform: Transform::from_xyz(0., 0., 2.),
+        ..default()
+    });
+
+    cmd.spawn_bundle(SpriteBundle {
+        sprite: Sprite {
+            custom_size: Some(Vec2 { x: 80., y: 1. }),
+            color: Color::YELLOW,
+            ..default()
+        },
+        transform: Transform::from_xyz(0., 0., 2.),
+        ..default()
+    });
+
+    // END SECTION
+
+    // test child
+    let id = cmd
+        .spawn_bundle(SpriteBundle {
+            sprite: Sprite {
+                custom_size: Some(Vec2 { x: 1., y: 80. }),
+                color: Color::GREEN,
+                ..default()
+            },
+            transform: Transform::from_xyz(0., 65., 2.),
+            ..default()
+        })
+        .id();
+
+    ///// ********************
+    let x = 0.78f32.cos() * 40.;
+    let y = 0.78f32.sin() * 40.;
+
+    let mut transform = Transform::from_xyz(x + 12.5, y + 25.0, 2.);
+    transform.rotation = Quat::from_rotation_z(-0.7853981634);
+
+    let id_2 = cmd
+        .spawn_bundle(SpriteBundle {
+            sprite: Sprite {
+                custom_size: Some(Vec2 { x: 1., y: 80. }),
+                color: Color::CYAN,
+                ..default()
+            },
+            transform: transform,
+            ..default()
+        })
+        .id();
 
     // player car
     cmd.spawn_bundle(SpriteBundle {
@@ -38,12 +102,15 @@ fn start_up(mut cmd: Commands) {
             color: Color::RED,
             ..default()
         },
+        transform: Transform::from_xyz(0., 0., CAR_Z_LAYER),
         ..default()
     })
     .insert(Speed::default())
     .insert(Controls::default())
     .insert(CameraFocus)
-    .insert(Player);
+    .insert(Player)
+    .add_child(id)
+    .add_child(id_2);
 
     // left line
     cmd.spawn_bundle(SpriteBundle {
@@ -71,29 +138,89 @@ fn start_up(mut cmd: Commands) {
     .insert(Line)
     .insert(CanCollide);
 
+    spawn_mid_lines(&mut cmd);
     spawn_obstacles(&mut cmd);
 }
 
-fn spawn_obstacles(cmd: &mut Commands) {
-    for x in 1..11 {
-        for y in 1..11 {
+fn spawn_mid_lines(cmd: &mut Commands) {
+    let mut entity = None;
+    for i in -3..7 {
+        entity = Some(
             cmd.spawn_bundle(SpriteBundle {
                 sprite: Sprite {
-                    custom_size: Some(CAR_SIZE),
-                    color: Color::YELLOW_GREEN,
+                    color: Color::WHITE,
+                    custom_size: Some(Vec2::new(8., 50.)),
                     ..default()
                 },
-                transform: Transform::from_xyz((x * 100) as f32, (y * 100) as f32, 0.),
+                transform: Transform::from_xyz(-33., i as f32 * 100., 0.),
                 ..default()
             })
-            .insert(CanCollide)
-            .insert(Speed {
-                max_speed: 3.0,
+            .insert(MidLane)
+            .id(),
+        );
+
+        cmd.spawn_bundle(SpriteBundle {
+            sprite: Sprite {
+                color: Color::WHITE,
+                custom_size: Some(Vec2::new(8., 50.)),
                 ..default()
-            })
-            .insert(Controls::move_up());
-        }
+            },
+            transform: Transform::from_xyz(33., i as f32 * 100., 0.),
+            ..default()
+        })
+        .insert(MidLane);
     }
+    cmd.entity(entity.unwrap()).insert(Last);
+}
+
+fn spawn_obstacles(cmd: &mut Commands) {
+    cmd.spawn_bundle(SpriteBundle {
+        sprite: Sprite {
+            custom_size: Some(CAR_SIZE),
+            color: Color::YELLOW_GREEN,
+            ..default()
+        },
+        transform: Transform::from_xyz(-66., 0., CAR_Z_LAYER),
+        ..default()
+    })
+    .insert(CanCollide)
+    .insert(Speed {
+        max_speed: 4.0,
+        ..default()
+    })
+    .insert(Controls::move_up());
+
+    cmd.spawn_bundle(SpriteBundle {
+        sprite: Sprite {
+            custom_size: Some(CAR_SIZE),
+            color: Color::YELLOW_GREEN,
+            ..default()
+        },
+        transform: Transform::from_xyz(0., 250., CAR_Z_LAYER),
+        ..default()
+    })
+    .insert(CanCollide)
+    .insert(Speed {
+        max_speed: 4.0,
+        ..default()
+    })
+    .insert(Controls::move_up());
+
+    cmd.spawn_bundle(SpriteBundle {
+        sprite: Sprite {
+            custom_size: Some(CAR_SIZE),
+            color: Color::YELLOW_GREEN,
+            ..default()
+        },
+        transform: Transform::from_xyz(66., 0., CAR_Z_LAYER),
+        ..default()
+    })
+    .insert(CanCollide)
+    .insert(Speed {
+        max_speed: 4.0,
+        ..default()
+    })
+    .insert(Controls::move_up());
 }
 
 #[derive(Component)]
@@ -153,6 +280,12 @@ impl Default for Speed {
 }
 
 #[derive(Component)]
+pub struct MidLane;
+
+#[derive(Component)]
+pub struct Last;
+
+#[derive(Component)]
 pub struct CanCollide;
 
 #[derive(Component)]
@@ -163,6 +296,9 @@ pub struct Player;
 
 #[derive(Component)]
 pub struct Line;
+
+#[derive(Component)]
+pub struct Length(f32);
 
 fn handle_key_input(
     key_inputs: ResMut<Input<KeyCode>>,
@@ -299,6 +435,54 @@ fn stop_dead(mut q: Query<(Entity, &mut Speed), Added<Damaged>>) {
             "changed 'alive', removed 'alive' component from entity"
         );
         speed.speed = 0.0;
-        dbg!(speed.speed);
+    }
+}
+
+struct MidLaneEntityBuffer(Entity);
+impl Deref for MidLaneEntityBuffer {
+    type Target = Entity;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+fn mid_lines_system(
+    mut cmd: Commands,
+    q: Query<&Transform, With<MidLane>>,
+    entity: Query<Entity, (With<MidLane>, With<Last>)>,
+    focused: Query<&Transform, With<CameraFocus>>,
+) {
+    let entity = entity.single();
+    let focused_y = focused.single().translation.y;
+
+    if let Ok(transform) = q.get(entity) {
+        if (focused_y.abs() - transform.translation.y.abs()).abs() < 600. {
+            info!("adding new set of lines");
+            cmd.spawn_bundle(SpriteBundle {
+                sprite: Sprite {
+                    color: Color::WHITE,
+                    custom_size: Some(Vec2::new(8., 50.)),
+                    ..default()
+                },
+                transform: Transform::from_xyz(-33., transform.translation.y + 100., 0.),
+                ..default()
+            })
+            .insert(MidLane)
+            .insert(Last);
+
+            cmd.spawn_bundle(SpriteBundle {
+                sprite: Sprite {
+                    color: Color::WHITE,
+                    custom_size: Some(Vec2::new(8., 50.)),
+                    ..default()
+                },
+                transform: Transform::from_xyz(33., transform.translation.y + 100., 0.),
+                ..default()
+            })
+            .insert(MidLane);
+
+            cmd.entity(entity).remove::<Last>();
+        }
     }
 }
