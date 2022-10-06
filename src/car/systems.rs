@@ -75,8 +75,6 @@ pub(super) fn controls_to_speed(mut controls: Query<(&Controls, &mut Speed), Wit
 }
 
 pub(super) fn move_car(mut moveable: Query<(&mut Transform, &Speed), Without<Damaged>>) {
-    // let (mut transform, speed) = moveable.single_mut();
-
     for (mut transform, speed) in moveable.iter_mut() {
         transform.translation.x += speed.speed * speed.angle.sin().neg();
         transform.translation.y += speed.speed * speed.angle.cos();

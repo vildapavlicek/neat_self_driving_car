@@ -5,7 +5,10 @@ use components::*;
 pub mod systems;
 use systems::*;
 
-use crate::common::components::CanCollide;
+use crate::{
+    common::components::CanCollide,
+    sensor::components::{Sensor, SensorDetails},
+};
 
 const CAR_SIZE: Vec2 = Vec2::new(25., 50.);
 const CAR_Z_LAYER: f32 = 1.0;
@@ -27,60 +30,23 @@ impl Plugin for CarPlugin {
 fn start_up(mut cmd: Commands) {
     cmd.spawn_bundle(Camera2dBundle::default());
 
-    // START SECTION
-    // DBG lines
-
-    cmd.spawn_bundle(SpriteBundle {
-        sprite: Sprite {
-            custom_size: Some(Vec2 { x: 1., y: 80. }),
-            color: Color::YELLOW,
-            ..default()
+    /* let s1 = cmd
+    .spawn_bundle(crate::sensor::components::Sensor::new(
+        0.,
+        0.,
+        crate::sensor::components::SensorDetails {
+            angle: 0.,
+            length: 120.,
         },
-        transform: Transform::from_xyz(0., 0., 2.),
-        ..default()
-    });
+    ))
+    .id(); */
 
-    cmd.spawn_bundle(SpriteBundle {
-        sprite: Sprite {
-            custom_size: Some(Vec2 { x: 80., y: 1. }),
-            color: Color::YELLOW,
-            ..default()
-        },
-        transform: Transform::from_xyz(0., 0., 2.),
-        ..default()
-    });
-
-    // END SECTION
-
-    // test child
-    let id = cmd
-        .spawn_bundle(SpriteBundle {
-            sprite: Sprite {
-                custom_size: Some(Vec2 { x: 1., y: 80. }),
-                color: Color::GREEN,
-                ..default()
-            },
-            transform: Transform::from_xyz(0., 65., 2.),
-            ..default()
-        })
-        .id();
-
-    ///// ********************
-    let x = 0.78f32.cos() * 40.;
-    let y = 0.78f32.sin() * 40.;
-
-    let mut transform = Transform::from_xyz(x + 12.5, y + 25.0, 2.);
-    transform.rotation = Quat::from_rotation_z(-0.7853981634);
-
-    let id_2 = cmd
-        .spawn_bundle(SpriteBundle {
-            sprite: Sprite {
-                custom_size: Some(Vec2 { x: 1., y: 80. }),
-                color: Color::CYAN,
-                ..default()
-            },
-            transform: transform,
-            ..default()
+    let s1 = cmd
+        .spawn()
+        .insert_bundle(TransformBundle::default())
+        .insert(SensorDetails {
+            angle: 0.,
+            length: 80.,
         })
         .id();
 
@@ -98,8 +64,7 @@ fn start_up(mut cmd: Commands) {
     .insert(Controls::default())
     .insert(CameraFocus)
     .insert(Player)
-    .add_child(id)
-    .add_child(id_2);
+    .add_child(s1);
 
     spawn_obstacles(&mut cmd);
 }

@@ -1,5 +1,6 @@
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
+use bevy_prototype_debug_lines::*;
 mod car;
 mod common;
 mod road;
@@ -16,8 +17,10 @@ fn main() {
             ..Default::default()
         })
         .add_plugins(DefaultPlugins)
+        .add_plugin(DebugLinesPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(car::CarPlugin)
         .add_plugin(road::RoadPlugin)
+        .add_plugin(sensor::SensorPlugin)
         .run();
 }
